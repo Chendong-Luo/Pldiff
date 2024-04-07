@@ -1,146 +1,149 @@
 % CPSC 312 2024
-% Some simple Prolog examples. In public domain.
-
-% To load in Prolog,:
-% swipl
-% ?- [mdiff].
-
-% Helper function
-% Helper input 
-% [[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17,18],[19,20,21,22,23,24],[25,26,27,28,29,30],[31,32,33,34,35,36]]
-
-middle_length(List, MidLength) :- 
-    append(Left, [Middle|_], List),
-    length(Left, MidLength),
-    length(Right, MidLength),
-    append(Left, [Middle|Right], List);
-
-    append(Left, Right, List),
-    length(Left, MidLength),
-    length(Right, MidLength).
-
-middle_point_coor(Matrix, [Y,X]) :- 
-    % Y = Num of row / 2, pick the up one if row is odd
-    % X = Num of col / 2, pick the left one if col is odd
-    middle_length(Matrix, Y),
-    nth1(Y, Matrix, Row),
-    middle_length(Row, X).
-
-middle_point(Matrix, MiddPoint) :-
-    middle_point_coor(Matrix, [Y,X]),
-    nth1(Y, Matrix, Row),
-    nth1(X, Row, MiddPoint).
-
-
 % m_diff functions
 
-coor_value(Matrix, [Y,X], Value) :-
-    nth1(Y, Matrix, Row),
-    nth1(X, Row, Value).
+divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, {Char0,Lo0,Mid0}, {Char1,Lo1,Mid1}, {Char0,Mid0,Hi0},{Char1,Mid1,Hi1} ) :-
+    % Assumeing given {ABCDE, 0,5}, {ABDF, 0, 4}, 3,2 
+    % return    {ABCDE, 0, 3}, // ABC
+    %           {ABDF, 0, 2}, //AB
+    %           {ABCDE, 3,5}, //DE
+    %           {ABDF, 3, 4} //DF
+    Mid0 is Lo0 + X,
+    Mid1 is Lo1 + Y.
 
-split_row(Row, Index, Left, Right) :-
-    append(Left, Right, Row),
-    length(Left, Index).
+all_points_on_diagonal({_,Lo0,Lo0}, {_,Lo1,Lo1}, Path) :- 
+    % add all pts on diagonal into path
+    % base case
+    Path = [[Lo0,Lo1]].
 
-lr_split_matrix([], _, [], []).
-
-lr_split_matrix([Row|Rest], Index, [Left|LeftRest], [Right|RightRest]) :-
-    split_row(Row, Index, Left, Right),
-    lr_split_matrix(Rest, Index, LeftRest, RightRest).
-
-up_down_split_matrix(Matrix, Index, Matrix_up, Matrix_down) :-
-    append(Matrix_up, Matrix_down, Matrix),
-    length(Matrix_up, Index).
-
-divide_matrix(Matrix, [Y,X], Matrix_left_up, Matrix_right_down) :- 
-    up_down_split_matrix(Matrix, Y, Up_matrix, Down_matrix),
-    lr_split_matrix(Up_matrix, X, Matrix_left_up, _),
-    lr_split_matrix(Down_matrix, X, _, Matrix_right_down).
+all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :- 
+    % add all pts on diagonal into path
+    Path0 = [[Lo0,Lo1]],
+    Lo0_new is Lo0 + 1,
+    Lo1_new is Lo1 + 1,
+    all_points_on_diagonal({Char0,Lo0_new,Hi0}, {Char1,Lo1_new,Hi1}, Path_rest),
+    append(Path0, Path_rest, Path).
 
 
-div_conq_matrix(Matrix, Path) :-
-    % base case: if matrix contain only one point then return path with one point
-    length(Matrix, 1),
-    nth1(1, Matrix, Row),
-    length(Row, 1),
-    coor_value(Matrix, [1,1], Point),
-    Path = [Point].
+div_conq_matrix({_,Lo0,Lo0}, {_,Lo1,Lo1}, Path) :-
+    % base case: both empty
+    Path = [].
 
-div_conq_matrix(Matrix, Path) :-
+% div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Lo1}, Path) :-
+div_conq_matrix({_,Lo0,Hi0}, {_,Lo1,Lo1}, Path) :-
+    % base case: char1 empty return delete char0 -> [Lo0,Lo1],[Lo0+1,Lo1]
+    Path = [[Lo0, Lo1],[Hi0, Lo1]].
+
+% div_conq_matrix({Char0,Lo0,Lo0}, {Char1,Lo1,Hi1}, Path) :-
+div_conq_matrix({_,Lo0,Lo0}, {_,Lo1,Hi1}, Path) :-
+    % base case: char0 empty return  insert char1 -> [Lo0,Lo1],[Lo0,Lo1+1]
+    Path = [[Lo0, Lo1],[Lo0, Hi1]].
+
+div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
+    % base case: if both short and not equal, return delete char0 -> [Lo0,Lo1],[Lo0+1,Lo1], insert char1 -> [Lo0+1,Lo1+1]
+    Hi0 is Lo0 + 1,
+    Hi1 is Lo1 + 1,
+    nth1(1, Str0, Char0),
+    nth1(1, Str1, Char1),
+    Char0 \= Char1,
+    Path = [[Lo0, Lo1],[Hi0, Lo1],[Hi0, Hi1]].    
+
+div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
+    % base case: if midsnake return diagonal end point and char0 char1 exactly match
     % Template function to get snake mid point
-    middle_point_coor(Matrix, [Y,X]),
+    mid_snake({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y),
+    X is Hi0 - Lo0 + 1,
+    Y is Hi1 - Lo1 + 1,
+    all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path).
 
-    % coor_value(Matrix, [Y,X], Mid)
-    % this line is no longer needed because the mid point was in the upper left matrix and will be included in LU_path
-    
-    divide_matrix(Matrix, [Y,X], LU, RD),
-    div_conq_matrix(LU, LU_path),
-    div_conq_matrix(RD, RD_path),
-    append(LU_path, RD_path, Path).
+div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
+    % Template function to get snake mid point
+    mid_snake({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y),
+    divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, SubStr0, SubStr1, SubStr2, SubStr3),
+    Lo2 is Lo0 + X - 1,
+    Lo3 is Lo1 + Y - 1,
+    Path0 = [[Lo2,Lo3]],
+    div_conq_matrix(SubStr0, SubStr1, Path_L),
+    div_conq_matrix(SubStr2, SubStr3, Path_R),
+    append(Path_L, Path0, Path_L_0),
+    append(Path_L_0, Path_R, Path).
 
 read_file_to_string(FileName, Content) :-
     open(FileName, read, Stream),
     read_string(Stream, _, Content),
     close(Stream).
 
+remove_duplicates([], []).
+remove_duplicates([H|T], [H|Result]) :-
+    % Remove all H from T
+    delete_all(H, T, NewT),
+    remove_duplicates(NewT, Result).
 
-render_diff(Path, Diff) :-
+delete_all(_, [], []).
+delete_all(X, [X|T], Result) :-
+    delete_all(X, T, Result).
+delete_all(X, [H|T], [H|Result]) :-
+    dif(X, H),
+    delete_all(X, T, Result).
+
+mdiff(Diff) :-
     read_file_to_string("A.txt", Row_string),
-    string_chars(Row_string, Row_chars),
-    read_file_to_string("B.txt", Column_string), 
+    read_file_to_string("B.txt", Column_string),
+    string_chars(Row_string, Row_chars), 
     string_chars(Column_string, Column_chars),
-    render(Row_chars, Column_chars, [0, 0], Path, Diff).
+    length(Row_chars, row_len),
+    length(Column_chars, column_len),
+    div_conq_matrix({Row_string,0,row_len}, {Column_string,0,column_len}, Path),
+    remove_duplicates(Path, NewPath),
+    render(Row_chars, Column_chars, [0, 0], NewPath, Diff).
 
-render([R_char | R_tail], [C_char | C_tail], [R, C], [[_, [R1, C1]] | Path_tail], Diff) :-
+render([R_char | R_tail], [C_char | C_tail], [R, C], [[R1, C1] | Path_tail], Diff) :-
+    R1 == 0, 
+    C1 == 0,
+    render([R_char | R_tail], [C_char | C_tail], [R, C], Path_tail, Diff);
+
     R1 - R > C1 - C,
-    R_new is R + 1,
-    render(R_tail, [C_char | C_tail], [R_new, C], [[_, [R1, C1]] | Path_tail], Diff_child),
-     atom_concat('+', R_char, Result),
+    render(R_tail, [C_char | C_tail], [R1, C1], Path_tail, Diff_child),
+    atom_concat('+', R_char, Result),
     append([Result], Diff_child, Diff);
 
     R1 - R =:= C1 - C,
-    R_new is R + 1,
-    C_new is C + 1,
-    render(R_tail, C_tail, [R_new, C_new], Path_tail, Diff_child),
-    append([R_char], Diff_child, Diff);
+    render(R_tail, C_tail, [R1, C1], Path_tail, Diff_child),
+    atom_concat('=', R_char, Result),
+    append([Result], Diff_child, Diff);
 
-    C_new is C + 1,
-    render([R_char | R_tail], C_tail, [R, C_new], [[_, [R1, C1]] | Path_tail], Diff_child),
+    R1 - R < C1 - C,
+    render([R_char | R_tail], C_tail, [R1, C1], Path_tail, Diff_child),
     atom_concat('-', C_char, Result),
     append([Result], Diff_child, Diff).
 
 
-render([], [C_char | C_tail], _, [], Diff) :-
-   
-    render([], C_tail, _, _, Diff_child),
+render([], [C_char | C_tail], _, [[R1, C1] | Path_tail], Diff) :-
+    render([], C_tail, [R1, C1], Path_tail, Diff_child),
     atom_concat('-', C_char, Result),
     append([Result], Diff_child, Diff).
 
 
-render([R_char | R_tail], [], _, [], Diff) :-
-    render(R_tail, [], _, _, Diff_child),
+render([R_char | R_tail],[], _, [[R1, C1] | Path_tail], Diff) :-
+    render(R_tail,[], [R1, C1], Path_tail, Diff_child),
     atom_concat('+', R_char, Result),
     append([Result], Diff_child, Diff).
 
 render([], [], _, [], []).
 
 
-% render([a,b,c], [a,b,c], [0,0], [[_, [1,1]], [_, [2,2]], [_,[3,3]]], R).
-% render([a,b,c], [a,b,c,d], [0,0], [[_, [1,1]], [_, [2,2]], [_,[3,3]]], R).
+% tests
 
+:- begin_tests(render_tests).
+test(test1) :- 
+    render(['a','b','c'], ['a','b','c'], [0,0], [[0,0], [1,1], [2,2], [3,3]], ['=a', '=b', '=c']),
+    render(['a','b','c'], ['a','b','c', 'd'], [0,0], [[0, 0], [1,1], [2,2], [3,3]], ['=a', '=b', '=c', '-d']).
+
+
+test(test2) :- 
+    render(['C','B','A','B','A','C'], ['A', 'B', 'C', 'A','B','B','A'], [0,0], [[0,1], [0,2], [1,3], [2,3], [3,4], [4,5], [4,6], [5,7], [6,7]], ['-A', '-B', '=C', '+B', '=A', '=B', '-B', '=A', '+C']).
+
+:- end_tests(render_tests).
 
     
 % Requirement for Input and Output:
-% Input format Matrix is a list of Rows, 
-% Rows is a list of Points, 
-% Point format should be [Char, [Row,Column]] 
-%   Char is the content of the cell; 
-%   Row, Column is the original row/col number of that cell
-%   All three value should stay unchanged after initial input
-% Expected black-box function TO_DO: middle_point_coor(Matrix, [Y,X])
-%   takes in the matrix and return the coordiator value of Y,X of the mid snake point
-%   Expected always return coordiator that is within the matrix
-%   Expected base case is 1*1 matrix? if not, either need to fix base case in div_conq_matrix or middle_point_coor (TO_DO: Further discussion)
-% TO_DO: test with odd number of col/row, bugs may need to be fixed
-% Current Test case to use:
-% ?- div_conq_matrix([[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17,18],[19,20,21,22,23,24],[25,26,27,28,29,30],[31,32,33,34,35,36]], Path).
+% Point format should be [Row,Column]
