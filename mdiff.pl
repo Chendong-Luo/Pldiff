@@ -96,36 +96,36 @@ mdiff(Diff) :-
     remove_duplicates(Path, NewPath),
     render(Row_chars, Column_chars, [0, 0], NewPath, Diff).
 
-render([R_char | R_tail], [C_char | C_tail], [R, C], [[R1, C1] | Path_tail], Diff) :-
+render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Diff) :-
     R1 == 0, 
     C1 == 0,
-    render([R_char | R_tail], [C_char | C_tail], [R, C], Path_tail, Diff);
+    render([R_char | R_tail], [C_char | C_tail], [C, R], Path_tail, Diff);
 
-    R1 - R > C1 - C,
-    render(R_tail, [C_char | C_tail], [R1, C1], Path_tail, Diff_child),
-    atom_concat('+', R_char, Result),
+    R1 - R < C1 - C,
+    render(R_tail, [C_char | C_tail], [C1, R1], Path_tail, Diff_child),
+    atom_concat('-', R_char, Result),
     append([Result], Diff_child, Diff);
 
     R1 - R =:= C1 - C,
-    render(R_tail, C_tail, [R1, C1], Path_tail, Diff_child),
+    render(R_tail, C_tail, [C1, R1], Path_tail, Diff_child),
     atom_concat('=', R_char, Result),
     append([Result], Diff_child, Diff);
 
-    R1 - R < C1 - C,
-    render([R_char | R_tail], C_tail, [R1, C1], Path_tail, Diff_child),
-    atom_concat('-', C_char, Result),
+    R1 - R > C1 - C,
+    render([R_char | R_tail], C_tail, [C1, R1], Path_tail, Diff_child),
+    atom_concat('+', C_char, Result),
     append([Result], Diff_child, Diff).
 
 
-render([], [C_char | C_tail], _, [[R1, C1] | Path_tail], Diff) :-
-    render([], C_tail, [R1, C1], Path_tail, Diff_child),
-    atom_concat('-', C_char, Result),
+render([], [C_char | C_tail], _, [[C1, R1] | Path_tail], Diff) :-
+    render([], C_tail, [C1, R1], Path_tail, Diff_child),
+    atom_concat('+', C_char, Result),
     append([Result], Diff_child, Diff).
 
 
-render([R_char | R_tail],[], _, [[R1, C1] | Path_tail], Diff) :-
-    render(R_tail,[], [R1, C1], Path_tail, Diff_child),
-    atom_concat('+', R_char, Result),
+render([R_char | R_tail],[], _, [[C1, R1] | Path_tail], Diff) :-
+    render(R_tail,[], [C1, R1], Path_tail, Diff_child),
+    atom_concat('-', R_char, Result),
     append([Result], Diff_child, Diff).
 
 render([], [], _, [], []).
@@ -140,7 +140,7 @@ test(test1) :-
 
 
 test(test2) :- 
-    render(['C','B','A','B','A','C'], ['A', 'B', 'C', 'A','B','B','A'], [0,0], [[0,1], [0,2], [1,3], [2,3], [3,4], [4,5], [4,6], [5,7], [6,7]], ['-A', '-B', '=C', '+B', '=A', '=B', '-B', '=A', '+C']).
+    render(['A', 'B', 'C', 'A','B','B','A'], ['C','B','A','B','A','C'], [0,0], [[1,0], [2,0], [3,1], [3,2], [4,3], [5,4], [6,4], [7,5], [7,6]], ['-A', '-B', '=C', '+B', '=A', '=B', '-B', '=A', '+C']).
 
 :- end_tests(render_tests).
 
