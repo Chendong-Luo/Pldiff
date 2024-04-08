@@ -1,85 +1,114 @@
 :- module(middle_snake, [
         middle_snake/4
       ]).
+:- use_module(library(clpfd)).
+:- use_module(library(lists)).
 
-use_module(library(lists)).
+% Util
+
+% GOOD
+% init_list_except_nth0(+Length, +Index, +Value, -List)
+% Initializes a list of given length with the specified value at the given index, and zeros elsewhere.
+init_list_except_nth0(Length, Index, Value, List) :-
+  PrevL is Index, PostL is Length-Index-1,
+  length(Prev, PrevL),
+  maplist(zero, Prev),
+  length(Post, PostL),
+  maplist(zero, Post),
+  append(Prev, [Value|Post], List).
+zero(0).
 
 %% Helper Functions: 
 
 % Good
 % Diagonal(K) to coordinates. k = X+Y
 diagonal_to_xy(K,X,Y) :- 
-  Y is K - X.
+  Y #= X - K.
 
+% Good
 % Retrieves the K+offset-th element of List and unifies it with X.
 get_fr(Offset, K, FRArray, X) :- 
-  lists:nth0(I, FRArray, X),
-  I =:= K+Offset. 
+  I #= K+Offset, 
+  lists:nth0(I, FRArray, X).
 
+% Goood
 % Diagonal(K) to furthest reaching point(FR) of that diagonal on D differences search 
 % The result coordinate is retreived from the FR Array
 diagonal_to_fr(Offset, K, D, FRArray, X) :-
-  K is 0 - D,
+  K #= 0 - D,
   get_fr(Offset, K, FRArray, X).
 diagonal_to_fr(Offset, K,D,FRArray, X) :-
-  D =\= K, 
-  KPlus = K+1, KMinus = K-1,
+  K #\= D, 
+  KPlus #= K+1, KMinus #= K-1,
   get_fr(Offset, KPlus, FRArray, KRight),
   get_fr(Offset, KMinus, FRArray, KLeft),
-  KRight > KLeft,
+  KLeft < KRight,
   X is KRight.
 diagonal_to_fr(Offset, K,_,FRArray, X) :-
   KMinus = K-1,
   get_fr(Offset, KMinus, FRArray, KLeft),
-  X is KLeft.
+  X is KLeft+1.
 
-% Strcmp moving forward
+% Good
+% Strcmp moving forward: while a[i] == b[i]; i++
 search_forward([], _, 0) :- true.
 search_forward(_, [], 0) :- true.
+search_forward([A|Body0], [A|Body1], Offset) :- 
+  Next #= Offset-1,
+  search_forward(Body0, Body1, Next).
 search_forward([A|_], [B|_], 0) :- 
   dif(A, B).
-search_forward([A|Body0], [A|Body1], Offset) :- 
-  search_forward(Body0, Body1, Offset-1).
 
-% Strcmp moving backward 
+% Good
+% Strcmp moving backward: while a[i] == b[i]; i--
 search_backward([], _, 0) :- true. 
 search_backward(_, [], 0) :- true.
 search_backward(A, B, 0) :- 
   append(_, [T0], A), append(_, [T1], B),
   dif(T0, T1).
 search_backward(A, B, Offset) :- 
-  append(_, [T], A), append(_, [T], B),
-  search_backward(A, B, Offset-1). 
+  append(HA, [T], A), append(HB, [T], B),
+  Next #= Offset-1,
+  search_backward(HA, HB, Next). 
 
+% Good
 % Extending a coordinate to furthest reaching point on that diagonal 
 % Usually this will be invoked after the search making a middle-snake shift
 % The search starts at X on diagonal K, moving alone with the diagonal until 
 % From[X] differs To[Y]. We do this in both directions.
-extend_fr_forward([], [], X, K, X, FRArray, FRArray) :- true.
-extend_fr_forward(From, To, X, K, XOut, FRArrayIn, FRArrayOut) :-
+% 
+% Offset: Offset into the FRArray. For a diagonal K, the actual point is stored 
+%         in FRArray[K + Offset]
+% From, To: Input String
+%  
+extend_fr_forward(_, [], [], X, K, X, FRArray, FRArray) :- true.
+extend_fr_forward(Offset, From, To, X, K, XOut, FRArrayIn, FRArrayOut) :-
+  Index #= Offset + K,
   diagonal_to_xy(K,X,Y),
   append(L, S0, From), length(L, X),
   append(R, S1, To), length(R, Y),
-  search_forward(S0, S1, Offset),
-  XOut =:= X+Offset,
-  append(H, [_|T], FRArrayIn), length(H, K),
+  search_forward(S0, S1, Move),
+  XOut #= X+Move,
+  append(H, [_|T], FRArrayIn), length(H, Index),
   append(H, [XOut|T], FRArrayOut).
 
-extend_fr_backward([], [], X, K, X, FRArray, FRArray) :- true. 
-extend_fr_backward(From, To, X, K, XOut, FRArrayIn, FRArrayOut) :- 
+% Good
+% Backward Version
+extend_fr_backward(_, [], [], X, K, X, FRArray, FRArray) :- true. 
+extend_fr_backward(Offset, From, To, X, K, XOut, FRArrayIn, FRArrayOut) :- 
+  Index #= Offset + K,
   diagonal_to_xy(K,X,Y),
-  append(S0, L, From), length(L, X),
-  append(S1, R, To), length(R, Y),
-  search_backward(L, R, Offset),
-  XOut =:= X-Offset,
-  append(H, [_|T], FRArrayIn), length(H, K),
+  append(S0, L, From), length(S0, X),
+  append(S1, R, To), length(S1, Y),
+  search_backward(S0, S1, Move),
+  XOut #= X-Move,
+  append(H, [_|T], FRArrayIn), length(H, Index),
   append(H, [XOut|T], FRArrayOut).
 
-
+%% Inner K-Loop: 
 
 %% Forward Search Inner Loop Implementation: 
 %% Search through diagonals -d < k < d with a step size of 2 
-
 check_finish_forward(Delta, D, K, BackwardIn, X) :- 
   % Delta is odd && k in [delta-d+1, delta+d-1]
   Delta mod 2 =:= 1, 
@@ -101,7 +130,6 @@ kloop_iter_forward(From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn
 
 %% Backward Search Inner Loop Implementation: 
 %% Search through diagonals -d < k < d with a step size of 2 
-
 check_finish_backward(Delta, D, K, ForwardIn, X) :- 
   % Delta is even && k+delta in [-d, d]
   Delta mod 2 =:= 0, 
@@ -121,7 +149,8 @@ kloop_iter_backward(From, To, Delta, D, K, Max, BackwardIn, BackwardOut, XOut) :
   extend_fr_backward(From, To, X, K, XExt, BackwardExt),
   kloop_iter(From, To, Delta, D, K+2, Max, BackwardExt, BackwardOut, ForwardIn, XOut). 
 
-% Outter D Loop, searching by increasing number of differences 
+% Outer D Loop:
+% searching by increasing number of differences where d = 0,1, ..., (max+1)/2
 
 dloop_proc_1(From, To, Delta, D, Max, ForwardIn, BackwardIn, XOut,ForwardOut, BackwardOut) :- 
   XOut > -1.
@@ -159,19 +188,7 @@ middle_snake(From, To, ReturnX, ReturnY) :-
 
   dloop(From, To, Delta, 0, Max, Forward, Backward, ReturnX, ReturnY, _, _). 
 
-% Util
 
-% GOOD
-% init_list_except_nth0(+Length, +Index, +Value, -List)
-% Initializes a list of given length with the specified value at the given index, and zeros elsewhere.
-init_list_except_nth0(Length, Index, Value, List) :-
-  PrevL is Index, PostL is Length-Index-1,
-  length(Prev, PrevL),
-  maplist(zero, Prev),
-  length(Post, PostL),
-  maplist(zero, Post),
-  append(Prev, [Value|Post], List).
-zero(0).
 
 
 :- begin_tests(middle_snake).
