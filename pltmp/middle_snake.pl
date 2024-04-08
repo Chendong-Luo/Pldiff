@@ -32,7 +32,8 @@ get_fr(Offset, K, FRArray, X) :-
   lists:nth0(I, FRArray, X).
 
 % Goood
-% Diagonal(K) to furthest reaching point(FR) of that diagonal on D differences search 
+% Diagonal(K) to furthest reaching point(FR) of neigboring diagonal on D differences search 
+% This is called "making a snake" (turn right or turn down when forwards, up or left when backwards)
 % The result coordinate is retreived from the FR Array
 diagonal_to_fr(Offset, K, D, FRArray, X) :-
   K #= 0 - D,
@@ -106,6 +107,12 @@ extend_fr_backward(Offset, From, To, X, K, XOut, FRArrayIn, FRArrayOut) :-
   append(H, [XOut|T], FRArrayOut).
 
 %% Inner K-Loop: 
+%
+%  The inner k loop terminates when: 
+%  If searching forward, after making a snake (calling diagonal_to_fr) and search (extend_fr_forward)
+%    We check_finish_forward (return x,y if clash with backward searching)
+%  If searching backward, after making a snake (calling diagonal_to_fr) and search (extend_fr_backward)
+%    We check_finish_backward (return x,y if clash with forward searching)
 
 %% Forward Search Inner Loop Implementation: 
 %% Search through diagonals -d < k < d with a step size of 2 
