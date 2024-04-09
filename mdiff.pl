@@ -1,6 +1,13 @@
 % CPSC 312 2024
 % m_diff functions
 
+% fake snake use for test, test case: div_conq_matrix({[a,b,c,d,e],0,5}, {[a,b,d,f],0,4}, Path). 
+mid_snake({_,0,5}, {_,0,4}, 3, 2).
+mid_snake({_,0,3}, {_,0,2}, 2, 2).
+mid_snake({_,3,5}, {_,2,4}, 1, 1).
+mid_snake({_,0,2}, {_,0,2}, 2, 2).
+% m_diff functions
+
 divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, {Char0,Lo0,Mid0}, {Char1,Lo1,Mid1}, {Char0,Mid0,Hi0},{Char1,Mid1,Hi1} ) :-
     % Assumeing given {ABCDE, 0,5}, {ABDF, 0, 4}, 3,2 
     % return    {ABCDE, 0, 3}, // ABC
@@ -39,11 +46,20 @@ div_conq_matrix({_,Lo0,Lo0}, {_,Lo1,Hi1}, Path) :-
     Path = [[Lo0, Lo1],[Lo0, Hi1]].
 
 div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
+    % base case: if both short and equal, return path [Lo0,Lo1],[Lo0+1,Lo1+1]
+    Hi0 is Lo0 + 1,
+    Hi1 is Lo1 + 1,
+    nth1(Hi0, Str0, Char0),
+    nth1(Hi1, Str1, Char1),
+    Char0 == Char1,
+    Path = [[Lo0, Lo1],[Hi0, Hi1]].
+
+div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
     % base case: if both short and not equal, return delete char0 -> [Lo0,Lo1],[Lo0+1,Lo1], insert char1 -> [Lo0+1,Lo1+1]
     Hi0 is Lo0 + 1,
     Hi1 is Lo1 + 1,
-    nth1(1, Str0, Char0),
-    nth1(1, Str1, Char1),
+    nth1(Hi0, Str0, Char0),
+    nth1(Hi1, Str1, Char1),
     Char0 \= Char1,
     Path = [[Lo0, Lo1],[Hi0, Lo1],[Hi0, Hi1]].    
 
@@ -51,16 +67,16 @@ div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     % base case: if midsnake return diagonal end point and char0 char1 exactly match
     % Template function to get snake mid point
     mid_snake({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y),
-    X is Hi0 - Lo0 + 1,
-    Y is Hi1 - Lo1 + 1,
+    X is Hi0 - Lo0,
+    Y is Hi1 - Lo1,
     all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path).
 
 div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     % Template function to get snake mid point
     mid_snake({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y),
     divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, SubStr0, SubStr1, SubStr2, SubStr3),
-    Lo2 is Lo0 + X - 1,
-    Lo3 is Lo1 + Y - 1,
+    Lo2 is Lo0 + X,
+    Lo3 is Lo1 + Y,
     Path0 = [[Lo2,Lo3]],
     div_conq_matrix(SubStr0, SubStr1, Path_L),
     div_conq_matrix(SubStr2, SubStr3, Path_R),
@@ -95,6 +111,11 @@ mdiff(Diff) :-
     div_conq_matrix({Row_string,0,row_len}, {Column_string,0,column_len}, Path),
     remove_duplicates(Path, NewPath),
     render(Row_chars, Column_chars, [0, 0], NewPath, Diff).
+
+mdiff1(Diff) :-
+    div_conq_matrix({[a,b,c,d,e],0,5}, {[a,b,d,f],0,4}, Path),
+    remove_duplicates(Path, NewPath),
+    render([a,b,c,d,e], [a,b,d,f], [0, 0], NewPath, Diff).
 
 render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Diff) :-
     R1 == 0, 
