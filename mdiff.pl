@@ -24,6 +24,7 @@ all_points_on_diagonal({_,Lo0,Lo0}, {_,Lo1,Lo1}, Path) :-
 
 all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :- 
     % add all pts on diagonal into path
+    Lo0 < Hi0, Lo1 < Hi1,
     Path0 = [[Lo0,Lo1]],
     Lo0_new is Lo0 + 1,
     Lo1_new is Lo1 + 1,
@@ -88,12 +89,14 @@ read_file_to_string(FileName, Content) :-
     read_string(Stream, _, Content),
     close(Stream).
 
+% remove duplicate points in the Path and also preserve the original sequence.
 remove_duplicates([], []).
 remove_duplicates([H|T], [H|Result]) :-
     % Remove all H from T
     delete_all(H, T, NewT),
     remove_duplicates(NewT, Result).
 
+% helper for recursively delete all occurances of a point in Path list.
 delete_all(_, [], []).
 delete_all(X, [X|T], Result) :-
     delete_all(X, T, Result).
@@ -101,6 +104,7 @@ delete_all(X, [H|T], [H|Result]) :-
     dif(X, H),
     delete_all(X, T, Result).
 
+% the entry point of this program.
 mdiff(Diff) :-
     read_file_to_string("A.txt", Row_string),
     read_file_to_string("B.txt", Column_string),
@@ -117,6 +121,7 @@ mdiff1(Diff) :-
     remove_duplicates(Path, NewPath),
     render([a,b,c,d,e], [a,b,d,f], [0, 0], NewPath, Diff).
 
+% render the differences according to the Path list.
 render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Diff) :-
     R1 == 0, 
     C1 == 0,
@@ -137,18 +142,19 @@ render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Dif
     atom_concat('+', C_char, Result),
     append([Result], Diff_child, Diff).
 
-
+% Row chars are running out
 render([], [C_char | C_tail], _, [[C1, R1] | Path_tail], Diff) :-
     render([], C_tail, [C1, R1], Path_tail, Diff_child),
     atom_concat('+', C_char, Result),
     append([Result], Diff_child, Diff).
 
-
+% Column chars are running out 
 render([R_char | R_tail],[], _, [[C1, R1] | Path_tail], Diff) :-
     render(R_tail,[], [C1, R1], Path_tail, Diff_child),
     atom_concat('-', R_char, Result),
     append([Result], Diff_child, Diff).
 
+% base case: both char lists are running out
 render([], [], _, [], []).
 
 
