@@ -129,13 +129,14 @@ kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardIn, Bac
   K > D. 
 kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut) :- 
   diagonal_to_fr(Offset, K, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
-  extend_fr_forward(Offset, From, To, X, K, XExt, ForwardOut), 
+  extend_fr_forward(Offset, From, To, X, K, XExt, ForwardIn, ForwardOut), 
   check_finish_forward(Offset, Delta, D, K, BackwardIn, XExt), 
   XOut =:= XExt, diagonal_to_xy(K, XOut, YOut). 
 kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut) :- 
   diagonal_to_fr(Offset, K, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
-  extend_fr_forward(Offset, From, To, X, K, XExt, ForwardExt),
-  kloop_iter(Offset, From, To, Delta, D, K+2, Max, ForwardExt, ForwardOut, BackwardIn, XOut, YOut). 
+  extend_fr_forward(Offset, From, To, X, K, XExt, ForwardIn, ForwardExt),
+  Next #= K+2,
+  kloop_iter_forward(Offset, From, To, Delta, D, Next, Max, ForwardExt, ForwardOut, BackwardIn, XOut, YOut). 
 
 % Good
 %% Backward Search Inner Loop Implementation: 
@@ -153,12 +154,14 @@ kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardIn, 
 kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut) :- 
   diagonal_to_fr(K+Delta, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
   extend_fr_backward(Offset, From, To, X, K, XExt, BackwardOut),
-  check_finish_backward(Delta, D, K, ForwardIn, XExt), 
+  check_finish_backward(Offset, Delta, D, K, ForwardIn, XExt), 
   XOut =:= XExt. 
 kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, XOut) :- 
-  diagonal_to_fr(K+Delta, D, BackwardIn, X), % X is FR on diagonal K in previous iteration
-  extend_fr_backward(From, To, X, K, XExt, BackwardExt),
-  kloop_iter(From, To, Delta, D, K+2, Max, BackwardExt, BackwardOut, ForwardIn, XOut). 
+  diagonal_to_fr(Offset, K+Delta, D, BackwardIn, X), % X is FR on diagonal K in previous iteration
+  extend_fr_backward(Offset, From, To, X, K, XExt, BackwardExt),
+  kloop_iter(Offset, From, To, Delta, D, K+2, Max, BackwardExt, BackwardOut, ForwardIn, XOut). 
+
+% :- kloop_iter_forward(3, [a, b, c], [a, b, d], 0, 0, 0, [0,0,0,0,0,0], O, [0,0,0,0,0,0], XOut,YOut) 
 
 % Outer D Loop:
 % searching by increasing number of differences where d = 0,1, ..., (max+1)/2
