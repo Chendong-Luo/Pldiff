@@ -114,44 +114,48 @@ extend_fr_backward(Offset, From, To, X, K, XOut, FRArrayIn, FRArrayOut) :-
 %  If searching backward, after making a snake (calling diagonal_to_fr) and search (extend_fr_backward)
 %    We check_finish_backward (return x,y if clash with forward searching)
 
+% Good
 %% Forward Search Inner Loop Implementation: 
 %% Search through diagonals -d < k < d with a step size of 2 
-check_finish_forward(Delta, D, K, BackwardIn, X) :- 
+check_finish_forward(Offset, Delta, D, K, BackwardIn, X) :- 
   % Delta is odd && k in [delta-d+1, delta+d-1]
-  Delta mod 2 =:= 1, 
-  Delta + 1 - D < k + 1, 
-  k < Delta + D, 
-  nth0(BackwardIn, X, K).
+  Delta mod 2 #= 1, 
+  Delta + 1 - D < K + 1, 
+  K < Delta + D, 
+  Index #= K + Offset, 
+  nth0(Index, BackwardIn, X).
    
-kloop_iter_forward(From, To, Delta, D, K, Max, ForwardIn, ForwardIn, BackwardIn, -1, -1) :- 
+kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardIn, BackwardIn, -1, -1) :- 
   K > D. 
-kloop_iter_forward(From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut) :- 
-  diagonal_to_fr(K, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
-  extend_fr_forward(From, To, X, K, XExt, ForwardOut), 
-  check_finish_forward(Delta, D, K, BackwardIn, XExt), 
+kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut) :- 
+  diagonal_to_fr(Offset, K, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
+  extend_fr_forward(Offset, From, To, X, K, XExt, ForwardOut), 
+  check_finish_forward(Offset, Delta, D, K, BackwardIn, XExt), 
   XOut =:= XExt, diagonal_to_xy(K, XOut, YOut). 
-kloop_iter_forward(From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut) :- 
-  diagonal_to_fr(K, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
-  extend_fr_forward(From, To, X, K, XExt, ForwardExt),
-  kloop_iter(From, To, Delta, D, K+2, Max, ForwardExt, ForwardOut, BackwardIn, XOut, YOut). 
+kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut) :- 
+  diagonal_to_fr(Offset, K, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
+  extend_fr_forward(Offset, From, To, X, K, XExt, ForwardExt),
+  kloop_iter(Offset, From, To, Delta, D, K+2, Max, ForwardExt, ForwardOut, BackwardIn, XOut, YOut). 
 
+% Good
 %% Backward Search Inner Loop Implementation: 
 %% Search through diagonals -d < k < d with a step size of 2 
-check_finish_backward(Delta, D, K, ForwardIn, X) :- 
+check_finish_backward(Offset, Delta, D, K, ForwardIn, X) :- 
   % Delta is even && k+delta in [-d, d]
-  Delta mod 2 =:= 0, 
+  Delta mod 2 #= 0, 
   0 - D < K + Delta + 1, 
   K + Delta < D + 1, 
-  nth0(ForwardIn, X, K+Delta). 
-   
-kloop_iter_backward(From, To, Delta, D, K, Max, BackwardIn, BackwardIn, ForwardIn, -1) :- 
+  Index #= K + Offset, 
+  nth0(Index, ForwardIn, X).
+  
+kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardIn, ForwardIn, -1) :- 
   K > D. 
-kloop_iter_backward(From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut) :- 
+kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut) :- 
   diagonal_to_fr(K+Delta, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
-  extend_fr_backward(From, To, X, K, XExt, BackwardOut),
+  extend_fr_backward(Offset, From, To, X, K, XExt, BackwardOut),
   check_finish_backward(Delta, D, K, ForwardIn, XExt), 
   XOut =:= XExt. 
-kloop_iter_backward(From, To, Delta, D, K, Max, BackwardIn, BackwardOut, XOut) :- 
+kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, XOut) :- 
   diagonal_to_fr(K+Delta, D, BackwardIn, X), % X is FR on diagonal K in previous iteration
   extend_fr_backward(From, To, X, K, XExt, BackwardExt),
   kloop_iter(From, To, Delta, D, K+2, Max, BackwardExt, BackwardOut, ForwardIn, XOut). 
