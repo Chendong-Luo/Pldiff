@@ -31,13 +31,14 @@ get_fr(Offset, K, FRArray, X) :-
   I #= K+Offset, 
   lists:nth0(I, FRArray, X).
 
-% Goood
+% Good
 % Diagonal(K) to furthest reaching point(FR) of neigboring diagonal on D differences search 
 % This is called "making a snake" (turn right or turn down when forwards, up or left when backwards)
 % The result coordinate is retreived from the FR Array
 diagonal_to_fr(Offset, K, D, FRArray, X) :-
   K #= 0 - D,
-  get_fr(Offset, K, FRArray, X).
+  KPlus #= K+1,
+  get_fr(Offset, KPlus, FRArray, X).
 diagonal_to_fr(Offset, K,D,FRArray, X) :-
   K #\= D, 
   KPlus #= K+1, KMinus #= K-1,
@@ -49,6 +50,40 @@ diagonal_to_fr(Offset, K,_,FRArray, X) :-
   KMinus = K-1,
   get_fr(Offset, KMinus, FRArray, KLeft),
   X is KLeft+1.
+
+diagonal_to_fr_reverse(Delta,Offset, K, D, FRArray, X) :-
+  K #= Delta - D,
+  KMinus #= K - 1,
+  get_fr(Offset, KMinus, FRArray, X).
+
+diagonal_to_fr_reverse(Delta,Offset, K, D, FRArray, X) :-
+  K #\= Delta + D, 
+  KPlus #= K + 1, KMinus #= K - 1,
+  get_fr(Offset, KPlus, FRArray, KRight),
+  get_fr(Offset, KMinus, FRArray, KLeft),
+  KRight < KLeft, % Note the condition change to reflect reverse direction
+  X is KLeft.
+
+diagonal_to_fr_reverse(Delta,Offset, K, _, FRArray, X) :-
+  KPlus #= K + 1,
+  get_fr(Offset, KPlus, FRArray, KRight),
+  X is KRight + 1.
+
+% diagonal_to_fr_reverse(Offset, Delta, K, D, FRArray, X) :-
+%   K #= Delta - D,
+%   KPlus #= K + 1,
+%   get_fr(Offset, KMinus, FRArray, X).
+% diagonal_to_fr_reverse(Offset, Delta, K, D, FRArray, X) :-
+%   K #\= Delta + D, 
+%   KPlus #= K + 1, KMinus #= K - 1,
+%   get_fr(Offset, KPlus, FRArray, KRight),
+%   get_fr(Offset, KMinus, FRArray, KLeft),
+%   KLeft > KRight,
+%   X is KRight - 1.
+% diagonal_to_fr_reverse(Offset, Delta, K, _, FRArray, X) :-
+%   KMinus #= K - 1,
+%   get_fr(Offset, KMinus, FRArray, KLeft),
+%   X is KLeft.
 
 % Good
 % Strcmp moving forward: while a[i] == b[i]; i++
@@ -149,17 +184,19 @@ check_finish_backward(Offset, Delta, D, K, ForwardIn, X) :-
   Index #= K + Offset, 
   nth0(Index, ForwardIn, X).
   
-kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardIn, ForwardIn, -1) :- 
+kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardIn, ForwardIn, -1, -1) :- 
   K > D. 
-kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut) :- 
-  diagonal_to_fr(K+Delta, D, ForwardIn, X), % X is FR on diagonal K in previous iteration
-  extend_fr_backward(Offset, From, To, X, K, XExt, BackwardOut),
+kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut, YOut) :- 
+  diagonal_to_fr_reverse(Offset, Delta, K, D, BackwardIn, X), % X is FR on diagonal K in previous iteration
+  KPlusDelta #= K + Delta,
+  extend_fr_backward(Offset, From, To, X, KPlusDelta, XExt, BackwardIn, BackwardOut),
   check_finish_backward(Offset, Delta, D, K, ForwardIn, XExt), 
   XOut =:= XExt. 
-kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, XOut) :- 
-  diagonal_to_fr(Offset, K+Delta, D, BackwardIn, X), % X is FR on diagonal K in previous iteration
-  extend_fr_backward(Offset, From, To, X, K, XExt, BackwardExt),
-  kloop_iter(Offset, From, To, Delta, D, K+2, Max, BackwardExt, BackwardOut, ForwardIn, XOut). 
+kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, XOut, YOut) :- 
+  diagonal_to_fr_reverse(Offset, Delta, K, D, BackwardIn, X), % X is FR on diagonal K in previous iteration
+  extend_fr_backward(Offset, From, To, X, KPlusDelta, XExt, BackwardIn, BackwardExt),
+  Next #= K+2,
+  kloop_iter_backward(Offset, From, To, Delta, D, Next, Max, BackwardExt, BackwardOut, ForwardIn, XOut, YOut). 
 
 % :- kloop_iter_forward(3, [a, b, c], [a, b, d], 0, 0, 0, [0,0,0,0,0,0], O, [0,0,0,0,0,0], XOut,YOut) 
 
