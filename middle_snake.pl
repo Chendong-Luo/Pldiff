@@ -223,18 +223,6 @@ kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut,
      once(kloop_iter_backward(Offset, From, To, Delta, D, Next, Max, BackwardExt, BackwardOut, ForwardIn, XOut, YOut))
   ).
 
-% kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut, YOut) :- 
-%   K #< D+1,
-%   format('~w ~46t ~w~72|~n', [K, BackwardIn]),
-%   Next #= K + 2, 
-%   once(mksnake_backward(Delta, Offset, K, D, BackwardIn, X)), % X is FR on diagonal K in previous iteration
-%   KPlusDelta #= K + Delta,
-%   once(extend_fr_backward(Offset, From, To, X, KPlusDelta, XExt, BackwardIn, BackwardExt)),
-%   kloop_iter_backward(Offset, From, To, Delta, D, Next, Max, BackwardExt, BackwardOut, ForwardIn, XOut, YOut).
-  
-
-% :- kloop_iter_forward(3, [a, b, c], [a, b, d], 0, 0, 0, [0,0,0,0,0,0], O, [0,0,0,0,0,0], XOut,YOut) 
-
 % Outer D Loop:
 % searching by increasing number of differences where d = 0,1, ..., (max+1)/2
 
@@ -255,8 +243,6 @@ dloop(Offset, From, To, Delta, D, Max, ForwardIn, BackwardIn, XOut, YOut, Forwar
   D #< div(Max+1, 2)+2, 
   DNext #= D+1,
   DNeg  #= 0-D,
-
-  format('DLOOP: ~w ~w ~w ~n', [D, ForwardIn, BackwardIn]),
 
   once(kloop_iter_forward(Offset, From, To, Delta, D, DNeg, Max, ForwardIn, ForwardExt, BackwardIn, XOut0, YOut0)), 
   (

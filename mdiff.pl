@@ -1,6 +1,7 @@
 % CPSC 312 2024
 % m_diff functions
 
+:- consult('middle_snake.pl').
 % fake snake use for test, test case: div_conq_matrix({[a,b,c,d,e],0,5}, {[a,b,d,f],0,4}, Path). 
 mid_snake({_,0,5}, {_,0,4}, 3, 2).
 mid_snake({_,0,3}, {_,0,2}, 2, 2).
