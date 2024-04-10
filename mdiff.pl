@@ -68,14 +68,18 @@ div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
 div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     % base case: if midsnake return diagonal end point and char0 char1 exactly match
     % Template function to get snake mid point
-    mid_snake({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y),
+    string_chars(Char0, Char0Ary), 
+    string_chars(Char1, Char1Ary),
+    middle_snake(Char0Ary, Char1Ary, X, Y),
     X is Hi0 - Lo0,
     Y is Hi1 - Lo1,
     all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path).
 
 div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     % Template function to get snake mid point
-    mid_snake({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y),
+    string_chars(Char0, Char0Ary), 
+    string_chars(Char1, Char1Ary),
+    middle_snake(Char0Ary, Char1Ary, X, Y),
     divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, SubStr0, SubStr1, SubStr2, SubStr3),
     Lo2 is Lo0 + X,
     Lo3 is Lo1 + Y,
@@ -111,9 +115,9 @@ mdiff(Diff) :-
     read_file_to_string("B.txt", Column_string),
     string_chars(Row_string, Row_chars), 
     string_chars(Column_string, Column_chars),
-    length(Row_chars, row_len),
-    length(Column_chars, column_len),
-    div_conq_matrix({Row_string,0,row_len}, {Column_string,0,column_len}, Path),
+    length(Row_chars, Row_len),
+    length(Column_chars, Column_len),
+    div_conq_matrix({Row_string,0,Row_len}, {Column_string,0,Column_len}, Path),
     remove_duplicates(Path, NewPath),
     render(Row_chars, Column_chars, [0, 0], NewPath, Diff).
 
