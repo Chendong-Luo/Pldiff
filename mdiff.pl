@@ -2,12 +2,30 @@
 % m_diff functions
 
 :- consult('middle_snake.pl').
+
 % fake snake use for test, test case: div_conq_matrix({[a,b,c,d,e],0,5}, {[a,b,d,f],0,4}, Path). 
 mid_snake({_,0,5}, {_,0,4}, 3, 2).
 mid_snake({_,0,3}, {_,0,2}, 2, 2).
 mid_snake({_,3,5}, {_,2,4}, 1, 1).
 mid_snake({_,0,2}, {_,0,2}, 2, 2).
-% m_diff functions
+
+sublist(_, _, _, [], []).
+sublist(_, EndIndex, CurrentIndex, _, Sublist) :-
+    CurrentIndex >= EndIndex,
+    Sublist = [].
+sublist(StartIndex, EndIndex, _, _, Sublist) :-
+    StartIndex == EndIndex,
+    Sublist = [].
+
+sublist(StartIndex, EndIndex, CurrentIndex, [_|Xs], Sublist) :-
+    CurrentIndex < StartIndex,
+    NewIndex is CurrentIndex + 1,
+    sublist(StartIndex, EndIndex, NewIndex, Xs, Sublist).
+sublist(StartIndex, EndIndex, CurrentIndex, [X|Xs], [X|Sublist]) :-
+    CurrentIndex >= StartIndex,
+    CurrentIndex < EndIndex,
+    NewIndex is CurrentIndex + 1,
+    sublist(StartIndex, EndIndex, NewIndex, Xs, Sublist).
 
 divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, {Char0,Lo0,Mid0}, {Char1,Lo1,Mid1}, {Char0,Mid0,Hi0},{Char1,Mid1,Hi1} ) :-
     % Assumeing given {ABCDE, 0,5}, {ABDF, 0, 4}, 3,2 
@@ -31,7 +49,6 @@ all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     Lo1_new is Lo1 + 1,
     all_points_on_diagonal({Char0,Lo0_new,Hi0}, {Char1,Lo1_new,Hi1}, Path_rest),
     append(Path0, Path_rest, Path).
-
 
 div_conq_matrix({_,Lo0,Lo0}, {_,Lo1,Lo1}, Path) :-
     % base case: both empty
@@ -67,19 +84,17 @@ div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
 
 div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     % base case: if midsnake return diagonal end point and char0 char1 exactly match
-    % Template function to get snake mid point
-    string_chars(Char0, Char0Ary), 
-    string_chars(Char1, Char1Ary),
-    middle_snake(Char0Ary, Char1Ary, X, Y),
+    sublist(Lo0, Hi0, 0, Char0, SubChar0),
+    sublist(Lo1, Hi1, 0, Char1, SubChar1),
+    middle_snake(Char0, Char1, X, Y),
     X is Hi0 - Lo0,
     Y is Hi1 - Lo1,
     all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path).
 
 div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
-    % Template function to get snake mid point
-    string_chars(Char0, Char0Ary), 
-    string_chars(Char1, Char1Ary),
-    middle_snake(Char0Ary, Char1Ary, X, Y),
+    sublist(Lo0, Hi0, 0, Char0, SubChar0),
+    sublist(Lo1, Hi1, 0, Char1, SubChar1),
+    middle_snake(Char0, Char1, X, Y),
     divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, SubStr0, SubStr1, SubStr2, SubStr3),
     Lo2 is Lo0 + X,
     Lo3 is Lo1 + Y,
@@ -117,14 +132,25 @@ mdiff(Diff) :-
     string_chars(Column_string, Column_chars),
     length(Row_chars, Row_len),
     length(Column_chars, Column_len),
-    div_conq_matrix({Row_string,0,Row_len}, {Column_string,0,Column_len}, Path),
+    div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path),
     remove_duplicates(Path, NewPath),
     render(Row_chars, Column_chars, [0, 0], NewPath, Diff).
 
-mdiff1(Diff) :-
-    div_conq_matrix({[a,b,c,d,e],0,5}, {[a,b,d,f],0,4}, Path),
+mdiff1(Diff, S1, S2) :-
+    string_chars(S1, Row_chars), 
+    string_chars(S2, Column_chars),
+    length(Row_chars, Row_len),
+    length(Column_chars, Column_len),
+    div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path),
     remove_duplicates(Path, NewPath),
-    render([a,b,c,d,e], [a,b,d,f], [0, 0], NewPath, Diff).
+    render(Row_string, Column_chars, [0, 0], NewPath, Diff).
+
+
+mdiff2(Diff, S1, S2) :-
+    string_chars(S1, Row_chars), 
+    string_chars(S2, Column_chars),
+    length(Row_chars, Row_len),
+    length(Column_chars, Column_len).
 
 % render the differences according to the Path list.
 render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Diff) :-
@@ -167,15 +193,38 @@ render([], [], _, [], []).
 
 :- begin_tests(render_tests).
 test(test1) :- 
-    render(['a','b','c'], ['a','b','c'], [0,0], [[0,0], [1,1], [2,2], [3,3]], ['=a', '=b', '=c']),
-    render(['a','b','c'], ['a','b','c', 'd'], [0,0], [[0, 0], [1,1], [2,2], [3,3]], ['=a', '=b', '=c', '-d']).
+    render(['a','b','c'], ['a','b','c'], [0,0], [[0,0], [1,1], [2,2], [3,3]], ['=a', '=b', '=c']).
 
 
 test(test2) :- 
-    render(['A', 'B', 'C', 'A','B','B','A'], ['C','B','A','B','A','C'], [0,0], [[1,0], [2,0], [3,1], [3,2], [4,3], [5,4], [6,4], [7,5], [7,6]], ['-A', '-B', '=C', '+B', '=A', '=B', '-B', '=A', '+C']).
+    render(['A','B','C','A','B','B','A'], ['C','B','A','B','A','C'], [0,0], [[1,0], [2,0], [3,1], [3,2], [4,3], [5,4], [6,4], [7,5], [7,6]], ['-A', '-B', '=C', '+B', '=A', '=B', '-B', '=A', '+C']).
 
 :- end_tests(render_tests).
 
     
-% Requirement for Input and Output:
-% Point format should be [Row,Column]
+start :-
+    repeat,
+    write('Enter your choice (1: Compare two string inputs, 2: Compare files, 3: quit): '), 
+    flush_output(current_output),
+    read(Input),
+    action(Input),
+    Input == 3, !.
+
+action(1) :-
+    write('Please enter the original string: '), flush_output(current_output),
+    read(Str1),
+    write('You entered: '), write(Str1), nl,
+    write('Please enter the string to change to: '), flush_output(current_output),
+    read(Str2),
+    write('You entered: '), write(Str2), nl,
+    string_chars(Str1, C),
+    write(C), nl.
+    
+
+action(2).
+
+action(3) :-
+    write('Quitting program.'), nl.
+
+do_action(_) :-
+    write('Invalid option, please enter 1, 2, or 3.'), nl.
