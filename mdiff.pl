@@ -190,27 +190,19 @@ delete_all(X, [H|T], [H|Result]) :-
     delete_all(X, T, Result).
 
 % the entry point of this program.
-mdiff(Diff) :-
+mdiff(Diff, Step) :-
     read_file_to_string("A.txt", Row_string),
     read_file_to_string("B.txt", Column_string),
     string_chars(Row_string, Row_chars), 
     string_chars(Column_string, Column_chars),
     length(Row_chars, Row_len),
     length(Column_chars, Column_len),
-    div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path),
+    once(div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path)),
+    format("Path: ~w ~n", [Path]),
     remove_duplicates(Path, NewPath),
-    render(Row_chars, Column_chars, [0, 0], NewPath, Diff).
+    render(Row_chars, Column_chars, [0, 0], NewPath, Diff, Step).
 
-mdiff1(Diff, S1, S2) :-
-    string_chars(S1, Row_chars), 
-    string_chars(S2, Column_chars),
-    length(Row_chars, Row_len),
-    length(Column_chars, Column_len),
-    div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path),
-    remove_duplicates(Path, NewPath),
-    render(Row_string, Column_chars, [0, 0], NewPath, Diff).
-
-mdiff_raw(Diff, S1, S2) :-
+mdiff_raw(Diff, S1, S2, Step) :-
     string_chars(S1, Row_chars), 
     string_chars(S2, Column_chars),
     length(Row_chars, Row_len),
@@ -218,24 +210,18 @@ mdiff_raw(Diff, S1, S2) :-
     once(div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path)),
     format("Path: ~w ~n", [Path]),
     remove_duplicates(Path, NewPath),
-    render(Row_chars, Column_chars, [0, 0], NewPath, Diff).
-
-
-mdiff2(Diff, S1, S2) :-
-    string_chars(S1, Row_chars), 
-    string_chars(S2, Column_chars),
-    length(Row_chars, Row_len),
-    length(Column_chars, Column_len).
+    render(Row_chars, Column_chars, [0, 0], NewPath, Diff, Step).
 
 % render the differences according to the Path list.
-render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Diff) :-
+render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Diff, Step) :-
     R1 == 0, 
     C1 == 0,
-    render([R_char | R_tail], [C_char | C_tail], [C, R], Path_tail, Diff);
+    render([R_char | R_tail], [C_char | C_tail], [C, R], Path_tail, Diff, Step);
 
     R1 - R < C1 - C,
     C_new is C + 1,
-    render(R_tail, [C_char | C_tail], [C_new, R], Path_tail, Diff_child),
+    render(R_tail, [C_char | C_tail], [C_new, R], Path_tail, Diff_child, Step_child),
+    Step is Step_child + 1,
     atom_concat('+', R_char, Result),
     append([Result], Diff_child, Diff);
 
@@ -243,7 +229,8 @@ render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Dif
     R1 - R > 1, 
     R_new is R + 1,
     C_new is C + 1,
-    render(R_tail, C_tail, [C_new, R_new], [[C1, R1] | Path_tail], Diff_child),
+    render(R_tail, C_tail, [C_new, R_new], [[C1, R1] | Path_tail], Diff_child, Step_child),
+    Step is Step_child,
     atom_concat('=', R_char, Result),
     append([Result], Diff_child, Diff);
 
@@ -251,73 +238,68 @@ render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Dif
     R1 - R =:= 1,
     R_new is R + 1,
     C_new is C + 1,
-    render(R_tail, C_tail, [C_new, R_new], Path_tail, Diff_child),
-     atom_concat('=', R_char, Result),
+    render(R_tail, C_tail, [C_new, R_new], Path_tail, Diff_child, Step_child),
+    Step is Step_child,
+    atom_concat('=', R_char, Result),
     append([Result], Diff_child, Diff);
 
     R1 - R > C1 - C,
     R_new is R + 1,
-    render([R_char | R_tail], C_tail, [C, R_new], Path_tail, Diff_child),
+    render([R_char | R_tail], C_tail, [C, R_new], Path_tail, Diff_child, Step_child),
+    Step is Step_child + 1,
     atom_concat('-', C_char, Result),
     append([Result], Diff_child, Diff).
 
 % Row chars are running out
-render([], [C_char | C_tail], _, _, Diff) :-
-    render([], C_tail, _, _, Diff_child),
+render([], [C_char | C_tail], _, _, Diff, Step) :-
+    render([], C_tail, _, _, Diff_child, Step_child),
+    Step is Step_child + 1,
     atom_concat('-', C_char, Result),
     append([Result], Diff_child, Diff).
 
 % Column chars are running out 
-render([R_char | R_tail],[], _, _, Diff) :-
-    render(R_tail,[], _, _, Diff_child),
+render([R_char | R_tail],[], _, _, Diff, Step) :-
+    render(R_tail,[], _, _, Diff_child, Step_child),
+    Step is Step_child + 1,
     atom_concat('+', R_char, Result),
     append([Result], Diff_child, Diff).
 
 % base case: both char lists are running out
-render([], [], _, [], []).
+render([], [], _, [], [], 0).
 
 
 % tests
 
-:- begin_tests(render_tests).
-test(test1) :- 
-    render(['a','b','c'], ['a','b','c'], [0,0], [[0,0], [1,1], [2,2], [3,3]], ['=a', '=b', '=c']).
-
-
-test(test2) :- 
-    render(['A','B','C','A','B','B','A'], ['C','B','A','B','A','C'], [0,0], [[1,0], [2,0], [3,1], [3,2], [4,3], [5,4], [6,4], [7,5], [7,6]], ['-A', '-B', '=C', '+B', '=A', '=B', '-B', '=A', '+C']).
-
-:- end_tests(render_tests).
-
-test3(D) :-
+test1(D) :-
     render([a,b,c,d], [a,b,c,d], [0,0], [[0,0], [4,4]], D).
 
-test4(D2) :-
+test2(D2) :-
     render([a,b,e,f], [a,b,c,f], [0,0], [[0,0],[2,2],[2,3],[3,3],[4,4]], D2).
     
 start :-
     repeat,
-    write('Enter your choice (1: Compare two string inputs, 2: Compare files, 3: quit): '), 
+    write('Enter your choice (1: Compare two strings, 2: Compare files, 3: Quit): '),
     flush_output(current_output),
-    read(Input),
+    read_line_to_string(user_input, InputString),
+    atom_number(InputString, Input),
     action(Input),
     Input == 3, !.
 
 action(1) :-
     write('Please enter the original string: '), flush_output(current_output),
-    read(Str1),
+    read_line_to_string(user_input, Str1),
     write('You entered: '), write(Str1), nl,
     write('Please enter the string to change to: '), flush_output(current_output),
-    read(Str2),
+    read_line_to_string(user_input, Str2),
     write('You entered: '), write(Str2), nl,
-    string_chars(Str1, C),
-    write(C), nl.
-    
+    mdiff_raw(Diff, Str1, Str2, Step),
+    write('Answer: '), write(Diff), nl,
+    write('Minimal steps: '), write(Step), nl.
 
-action(2).
+action(2) :-
+    mdiff(Diff, Step),
+    write('Answer: '), write(Diff), nl,
+    write('Minimal steps: '), write(Step), nl.
 
 action(3) :-
     write('Quitting program.'), nl.
-
-do_action(_) :-
-    write('Invalid option, please enter 1, 2, or 3.'), nl.
