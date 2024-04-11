@@ -216,7 +216,9 @@ mdiff_raw(Diff, S1, S2) :-
     length(Row_chars, Row_len),
     length(Column_chars, Column_len),
     once(div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path)),
-    format("Path: ~w ~n", [Path]).
+    format("Path: ~w ~n", [Path]),
+    remove_duplicates(Path, NewPath),
+    render(Row_chars, Column_chars, [0, 0], NewPath, Diff).
 
 
 mdiff2(Diff, S1, S2) :-
@@ -232,30 +234,43 @@ render([R_char | R_tail], [C_char | C_tail], [C, R], [[C1, R1] | Path_tail], Dif
     render([R_char | R_tail], [C_char | C_tail], [C, R], Path_tail, Diff);
 
     R1 - R < C1 - C,
-    render(R_tail, [C_char | C_tail], [C1, R1], Path_tail, Diff_child),
-    atom_concat('-', R_char, Result),
+    C_new is C + 1,
+    render(R_tail, [C_char | C_tail], [C_new, R], Path_tail, Diff_child),
+    atom_concat('+', R_char, Result),
     append([Result], Diff_child, Diff);
 
     R1 - R =:= C1 - C,
-    render(R_tail, C_tail, [C1, R1], Path_tail, Diff_child),
+    R1 - R > 1, 
+    R_new is R + 1,
+    C_new is C + 1,
+    render(R_tail, C_tail, [C_new, R_new], [[C1, R1] | Path_tail], Diff_child),
     atom_concat('=', R_char, Result),
     append([Result], Diff_child, Diff);
 
+    R1 - R =:= C1 - C,
+    R1 - R =:= 1,
+    R_new is R + 1,
+    C_new is C + 1,
+    render(R_tail, C_tail, [C_new, R_new], Path_tail, Diff_child),
+     atom_concat('=', R_char, Result),
+    append([Result], Diff_child, Diff);
+
     R1 - R > C1 - C,
-    render([R_char | R_tail], C_tail, [C1, R1], Path_tail, Diff_child),
-    atom_concat('+', C_char, Result),
+    R_new is R + 1,
+    render([R_char | R_tail], C_tail, [C, R_new], Path_tail, Diff_child),
+    atom_concat('-', C_char, Result),
     append([Result], Diff_child, Diff).
 
 % Row chars are running out
-render([], [C_char | C_tail], _, [[C1, R1] | Path_tail], Diff) :-
-    render([], C_tail, [C1, R1], Path_tail, Diff_child),
-    atom_concat('+', C_char, Result),
+render([], [C_char | C_tail], _, _, Diff) :-
+    render([], C_tail, _, _, Diff_child),
+    atom_concat('-', C_char, Result),
     append([Result], Diff_child, Diff).
 
 % Column chars are running out 
-render([R_char | R_tail],[], _, [[C1, R1] | Path_tail], Diff) :-
-    render(R_tail,[], [C1, R1], Path_tail, Diff_child),
-    atom_concat('-', R_char, Result),
+render([R_char | R_tail],[], _, _, Diff) :-
+    render(R_tail,[], _, _, Diff_child),
+    atom_concat('+', R_char, Result),
     append([Result], Diff_child, Diff).
 
 % base case: both char lists are running out
@@ -274,6 +289,11 @@ test(test2) :-
 
 :- end_tests(render_tests).
 
+test3(D) :-
+    render([a,b,c,d], [a,b,c,d], [0,0], [[0,0], [4,4]], D).
+
+test4(D2) :-
+    render([a,b,e,f], [a,b,c,f], [0,0], [[0,0],[2,2],[2,3],[3,3],[4,4]], D2).
     
 start :-
     repeat,
