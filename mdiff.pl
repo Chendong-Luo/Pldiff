@@ -3,8 +3,35 @@
 
 :- consult('middle_snake.pl').
 
+:- use_module(library(clpfd)).
+:- use_module(library(lists)).
+
 % fake snake use for test, test case: div_conq_matrix({[a,b,c,d,e],0,5}, {[a,b,d,f],0,4}, Path). 
 % middle_snake({_,_,_}, {_,0,4}, 3, 2, 1, 2, 1).
+solve_diff_one(N, M, [], _, [[BX, OutY]], BX, BY) :- 
+  OutY #= BY + M.
+solve_diff_one(N, M, _, [], [[OutX, BY]], BX, BY) :- 
+  OutX #= BX + N.
+solve_diff_one(N, M, [H|_], [H|_], Path, BX, BY) :- 
+  NN #= BX + N, MM #= BY + M,
+  (
+    N > M
+  -> Path = [[BX,BY], [MM, MM], [NN, MM]]
+  ; Path = [[BX,BY], [NN, NN], [NN, MM]]
+  ).
+solve_diff_one(N, M, [A|_], [B|_], Path, BX, BY) :- 
+  dif(A, B), 
+  BXPlus1 #= BX + 1, BYPlus1 #= BY + 1, 
+  NN #= BX + N, MM #= BY + M,
+  (
+    N > M 
+  -> Path = [[BX,BY], [BXPlus1, BY], [NN, MM]]
+  ; Path = [[BX,BY], [BX, BYPlus1], [NN, MM]]
+  ).
+
+
+len({_, Lo, Hi}, Length) :- 
+  Length #= Hi-Lo+1. 
 
 sublist(_, _, _, [], []).
 sublist(_, EndIndex, CurrentIndex, _, Sublist) :-
@@ -27,8 +54,8 @@ sublist(StartIndex, EndIndex, CurrentIndex, [X|Xs], [X|Sublist]) :-
 divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, U, V, {Char0,Lo0,Mid0}, {Char1,Lo1,Mid1}, {Char0,Mid2,Hi0},{Char1,Mid3,Hi1} ) :-
     Mid0 is Lo0 + X,
     Mid1 is Lo1 + Y,
-    Mid2 is Lo0 + U,
-    Mid3 is Lo1 + V.
+    Mid2 is Lo0 + U+1,
+    Mid3 is Lo1 + V+1.
 
 all_points_on_diagonal({_,Lo0,Lo0}, {_,Lo1,Lo1}, Path) :- 
     % add all pts on diagonal into path
@@ -44,61 +71,103 @@ all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     all_points_on_diagonal({Char0,Lo0_new,Hi0}, {Char1,Lo1_new,Hi1}, Path_rest),
     append(Path0, Path_rest, Path).
 
-div_conq_matrix({_,Lo0,Lo0}, {_,Lo1,Lo1}, Path) :-
-    % base case: both empty
-    Path = [].
-
-% div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Lo1}, Path) :-
-div_conq_matrix({_,Lo0,Hi0}, {_,Lo1,Lo1}, Path) :-
-    % base case: char1 empty return delete char0 -> [Lo0,Lo1],[Lo0+1,Lo1]
-    Path = [[Lo0, Lo1],[Hi0, Lo1]].
-
-% div_conq_matrix({Char0,Lo0,Lo0}, {Char1,Lo1,Hi1}, Path) :-
-div_conq_matrix({_,Lo0,Lo0}, {_,Lo1,Hi1}, Path) :-
-    % base case: char0 empty return  insert char1 -> [Lo0,Lo1],[Lo0,Lo1+1]
-    Path = [[Lo0, Lo1],[Lo0, Hi1]].
-
-div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
-    % base case: if both short and equal, return path [Lo0,Lo1],[Lo0+1,Lo1+1]
-    Hi0 is Lo0 + 1,
-    Hi1 is Lo1 + 1,
-    nth1(Hi0, Str0, Char0),
-    nth1(Hi1, Str1, Char1),
-    Char0 == Char1,
-    Path = [[Lo0, Lo1],[Hi0, Hi1]].
-
-div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
-    % base case: if both short and not equal, return delete char0 -> [Lo0,Lo1],[Lo0+1,Lo1], insert char1 -> [Lo0+1,Lo1+1]
-    Hi0 is Lo0 + 1,
-    Hi1 is Lo1 + 1,
-    nth1(Hi0, Str0, Char0),
-    nth1(Hi1, Str1, Char1),
-    Char0 \= Char1,
-    Path = [[Lo0, Lo1],[Hi0, Lo1],[Hi0, Hi1]].    
+% div_conq_matrix({_,Lo0,Lo0}, {_,Lo1,Lo1}, Path) :-
+%     % base case: both empty
+%     Path = [].
+%
+% % div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Lo1}, Path) :-
+% div_conq_matrix({_,Lo0,Hi0}, {_,Lo1,Lo1}, Path) :-
+%     % base case: char1 empty return delete char0 -> [Lo0,Lo1],[Lo0+1,Lo1]
+%     Path = [[Lo0, Lo1],[Hi0, Lo1]].
+%
+% % div_conq_matrix({Char0,Lo0,Lo0}, {Char1,Lo1,Hi1}, Path) :-
+% div_conq_matrix({_,Lo0,Lo0}, {_,Lo1,Hi1}, Path) :-
+%     % base case: char0 empty return  insert char1 -> [Lo0,Lo1],[Lo0,Lo1+1]
+%     Path = [[Lo0, Lo1],[Lo0, Hi1]].
+%
+% div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
+%     % base case: if both short and equal, return path [Lo0,Lo1],[Lo0+1,Lo1+1]
+%     Hi0 is Lo0 + 1,
+%     Hi1 is Lo1 + 1,
+%     nth1(Hi0, Str0, Char0),
+%     nth1(Hi1, Str1, Char1),
+%     Char0 == Char1,
+%     Path = [[Lo0, Lo1],[Hi0, Hi1]].
+%
+% div_conq_matrix({Str0,Lo0,Hi0}, {Str1,Lo1,Hi1}, Path) :-
+%     % base case: if both short and not equal, return delete char0 -> [Lo0,Lo1],[Lo0+1,Lo1], insert char1 -> [Lo0+1,Lo1+1]
+%     Hi0 is Lo0 + 1,
+%     Hi1 is Lo1 + 1,
+%     nth1(Hi0, Str0, Char0),
+%     nth1(Hi1, Str1, Char1),
+%     Char0 \= Char1,
+%     Path = [[Lo0, Lo1],[Hi0, Lo1],[Hi0, Hi1]].    
+%
+% div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
+%     % base case: if midsnake return diagonal end point and char0 char1 exactly match
+%     sublist(Lo0, Hi0, 0, Char0, SubChar0),
+%     sublist(Lo1, Hi1, 0, Char1, SubChar1),
+%     middle_snake(SubChar0, SubChar1, X, Y, U, V, Diff),
+%     X is Hi0 - Lo0,
+%     Y is Hi1 - Lo1,
+%     all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path).
 
 div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
-    % base case: if midsnake return diagonal end point and char0 char1 exactly match
-    sublist(Lo0, Hi0, 0, Char0, SubChar0),
-    sublist(Lo1, Hi1, 0, Char1, SubChar1),
-    middle_snake(SubChar0, SubChar1, X, Y, U, V, Diff),
-    X is Hi0 - Lo0,
-    Y is Hi1 - Lo1,
-    all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path).
+  Lo0 > Hi0, 
+  Lo1Next #= Lo1+1,
+  (
+    Lo1 < Hi1
+  -> div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1Next,Hi1}, PathNext),
+     Path = [[Lo0,Lo1]|PathNext]
+  ;  Path = [[Lo0,Lo1]]
+  ).
 
 div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
+  Lo1 > Hi1, 
+  Lo0Next #= Lo0+1,
+  (
+    Lo0 < Hi0
+  -> div_conq_matrix({Char0,Lo0Next,Hi0}, {Char1,Lo1,Hi1}, PathNext),
+     Path = [[Lo0,Lo1]|PathNext]
+  ;  Path = [[Lo0,Lo1]]
+  ).
+
+div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
+    N #= Hi0 - Lo0, M #= Hi1 - Lo1,
     sublist(Lo0, Hi0, 0, Char0, SubChar0),
     sublist(Lo1, Hi1, 0, Char1, SubChar1),
+    format("Search: X= ~w Y=~w Lo0=~w Hi0=~w Lo1=~w Hi1=~w ~n", [SubChar0, SubChar1, Lo1, Hi0, Lo1, Hi1]),
     middle_snake(SubChar0, SubChar1, X, Y, U, V, Diff),
-    divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, U, V, SubStr0, SubStr1, SubStr2, SubStr3),
-    Lo2 is Lo0 + X,
-    Lo3 is Lo1 + Y,
-    Lo4 is Lo0 + U,
-    Lo5 is Lo1 + V,
-    Path0 = [[Lo2,Lo3], [Lo4, Lo5]],
-    div_conq_matrix(SubStr0, SubStr1, Path_L),
-    div_conq_matrix(SubStr2, SubStr3, Path_R),
-    append(Path_L, Path0, Path_L_0),
-    append(Path_L_0, Path_R, Path).
+    format("Got: X=~w Y=~w U=~w V=~w Diff=~w ~n", [X,Y,U,V,Diff]),
+      Lo2 is Lo0 + X,
+      Lo3 is Lo1 + Y,
+      Lo4 is Lo0 + U,
+      Lo5 is Lo1 + V,
+      divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, U, V, SubStr0, SubStr1, SubStr2, SubStr3),
+    ( Diff > 1
+    -> 
+      % Lo2 is Lo0 + X,
+      % Lo3 is Lo1 + Y,
+      % Lo4 is Lo0 + U,
+      % Lo5 is Lo1 + V,
+      Path0 = [[Lo2,Lo3], [Lo4, Lo5]],
+    format("Next Search Got: X=~w Y=~w U=~w V=~w Diff=~w ~w ~w ~w ~w  ~n", [X,Y,U,V,Diff, SubStr0, SubStr1, SubStr2, SubStr3]),
+      once(div_conq_matrix(SubStr0, SubStr1, Path_L)),
+      once(div_conq_matrix(SubStr2, SubStr3, Path_R)),
+      append(Path_L, Path0, Path_L_0),
+      append(Path_L_0, Path_R, Path) 
+    ; 
+    format("Base Got: X=~w Y=~w U=~w V=~w Diff=~w ~n ~w ~w ~w ~w", [X,Y,U,V,Diff,SubStr0, SubStr1, SubStr2, SubStr3]),
+      append(RowLeft, RowRight, SubChar0), length(RowLeft, X), 
+      append(ColLeft, ColRight, SubChar1), length(ColLeft, Y),
+      solve_diff_one(X, Y, RowLeft, ColLeft, PathLeft, Lo0, Lo1), 
+      len(SubStr2, XRight), len(SubStr3, YRight),
+      % length(RowRight, XRight), length(ColRight, YRight),
+      UPlusLo0 #= U + Lo0, VPlusLo1 #= V + Lo1,
+      solve_diff_one(XRight, YRight, RowRight, ColRight, PathRight, UPlusLo0, VPlusLo1), 
+      format("Got ~w ~w ~w ~w ~w ~w ~n", [PathLeft, PathRight, X, Y, XRight, YRight]),
+      append(PathLeft, PathRight, Path)
+    ).
 
 read_file_to_string(FileName, Content) :-
     open(FileName, read, Stream),
@@ -140,6 +209,14 @@ mdiff1(Diff, S1, S2) :-
     div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path),
     remove_duplicates(Path, NewPath),
     render(Row_string, Column_chars, [0, 0], NewPath, Diff).
+
+mdiff_raw(Diff, S1, S2) :-
+    string_chars(S1, Row_chars), 
+    string_chars(S2, Column_chars),
+    length(Row_chars, Row_len),
+    length(Column_chars, Column_len),
+    once(div_conq_matrix({Row_chars,0,Row_len}, {Column_chars,0,Column_len}, Path)),
+    format("Path: ~w ~n", [Path]).
 
 
 mdiff2(Diff, S1, S2) :-
