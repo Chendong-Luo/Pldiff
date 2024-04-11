@@ -4,10 +4,7 @@
 :- consult('middle_snake.pl').
 
 % fake snake use for test, test case: div_conq_matrix({[a,b,c,d,e],0,5}, {[a,b,d,f],0,4}, Path). 
-mid_snake({_,0,5}, {_,0,4}, 3, 2).
-mid_snake({_,0,3}, {_,0,2}, 2, 2).
-mid_snake({_,3,5}, {_,2,4}, 1, 1).
-mid_snake({_,0,2}, {_,0,2}, 2, 2).
+% middle_snake({_,_,_}, {_,0,4}, 3, 2, 1, 2, 1).
 
 sublist(_, _, _, [], []).
 sublist(_, EndIndex, CurrentIndex, _, Sublist) :-
@@ -27,14 +24,11 @@ sublist(StartIndex, EndIndex, CurrentIndex, [X|Xs], [X|Sublist]) :-
     NewIndex is CurrentIndex + 1,
     sublist(StartIndex, EndIndex, NewIndex, Xs, Sublist).
 
-divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, {Char0,Lo0,Mid0}, {Char1,Lo1,Mid1}, {Char0,Mid0,Hi0},{Char1,Mid1,Hi1} ) :-
-    % Assumeing given {ABCDE, 0,5}, {ABDF, 0, 4}, 3,2 
-    % return    {ABCDE, 0, 3}, // ABC
-    %           {ABDF, 0, 2}, //AB
-    %           {ABCDE, 3,5}, //DE
-    %           {ABDF, 3, 4} //DF
+divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, U, V, {Char0,Lo0,Mid0}, {Char1,Lo1,Mid1}, {Char0,Mid2,Hi0},{Char1,Mid3,Hi1} ) :-
     Mid0 is Lo0 + X,
-    Mid1 is Lo1 + Y.
+    Mid1 is Lo1 + Y,
+    Mid2 is Lo0 + U,
+    Mid3 is Lo1 + V.
 
 all_points_on_diagonal({_,Lo0,Lo0}, {_,Lo1,Lo1}, Path) :- 
     % add all pts on diagonal into path
@@ -86,7 +80,7 @@ div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     % base case: if midsnake return diagonal end point and char0 char1 exactly match
     sublist(Lo0, Hi0, 0, Char0, SubChar0),
     sublist(Lo1, Hi1, 0, Char1, SubChar1),
-    middle_snake(Char0, Char1, X, Y),
+    middle_snake(SubChar0, SubChar1, X, Y, U, V, Diff),
     X is Hi0 - Lo0,
     Y is Hi1 - Lo1,
     all_points_on_diagonal({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path).
@@ -94,11 +88,13 @@ div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
 div_conq_matrix({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, Path) :-
     sublist(Lo0, Hi0, 0, Char0, SubChar0),
     sublist(Lo1, Hi1, 0, Char1, SubChar1),
-    middle_snake(Char0, Char1, X, Y),
-    divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, SubStr0, SubStr1, SubStr2, SubStr3),
+    middle_snake(SubChar0, SubChar1, X, Y, U, V, Diff),
+    divide_string({Char0,Lo0,Hi0}, {Char1,Lo1,Hi1}, X, Y, U, V, SubStr0, SubStr1, SubStr2, SubStr3),
     Lo2 is Lo0 + X,
     Lo3 is Lo1 + Y,
-    Path0 = [[Lo2,Lo3]],
+    Lo4 is Lo0 + U,
+    Lo5 is Lo1 + V,
+    Path0 = [[Lo2,Lo3], [Lo4, Lo5]],
     div_conq_matrix(SubStr0, SubStr1, Path_L),
     div_conq_matrix(SubStr2, SubStr3, Path_R),
     append(Path_L, Path0, Path_L_0),
