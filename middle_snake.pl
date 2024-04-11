@@ -1,5 +1,5 @@
 :- module(middle_snake, [
-        middle_snake/4
+        middle_snake/7
       ]).
 :- use_module(library(clpfd)).
 :- use_module(library(lists)).
@@ -183,9 +183,9 @@ check_finish_forward(_, _, Offset, Delta, D, K, BackwardIn, X) :-
   nth0(Index, BackwardIn, X).
 
 % Main K-Loop Iteration 
-kloop_iter_forward(_, _, _, _, D, K, _, ForwardIn, ForwardIn, _, -1, -1) :- 
+kloop_iter_forward(_, _, _, _, D, K, _, ForwardIn, ForwardIn, _, -1, -1, -1, -1) :- 
   K #> D. 
-kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut) :- 
+kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut, U, V) :- 
   K #< D+1, 
   Next #= K+2,
   once(mksnake_forward(Offset, K, D, ForwardIn, X)), % X is FR on diagonal K in previous iteration
@@ -193,8 +193,8 @@ kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, Ba
   length(From, LX), length(To, LY),
   (
     check_finish_forward(LX, LY, Offset, Delta, D, K, BackwardIn, XExt)
-  -> XOut #= XExt, diagonal_to_xy(K, XOut, YOut)
-  ; once(kloop_iter_forward(Offset, From, To, Delta, D, Next, Max, ForwardExt, ForwardOut, BackwardIn, XOut, YOut))
+  -> XOut #= X, diagonal_to_xy(K, XOut, YOut), U #= XExt, V #= XExt - K
+  ; once(kloop_iter_forward(Offset, From, To, Delta, D, Next, Max, ForwardExt, ForwardOut, BackwardIn, XOut, YOut, U, V))
   ).
 
 %% Backward Search Inner Loop Implementation: 
@@ -207,20 +207,19 @@ check_finish_backward(Offset, Delta, D, K, ForwardIn, X) :-
   Index #= K + Offset, 
   nth0(Index, ForwardIn, X).
   
-kloop_iter_backward(_, _, _, _, D, K, _, BackwardIn, BackwardIn, _, -1, -1) :- 
+kloop_iter_backward(_, _, _, _, D, K, _, BackwardIn, BackwardIn, _, -1, -1, -1, -1) :- 
   K #> D. 
-kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut, YOut) :- 
+kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut, YOut, U, V) :- 
   K #< D+1,
   Next #= K+2,
   KPlusDelta #= K + Delta,
   once(mksnake_backward(Delta, Offset, K, D, BackwardIn, X)), % X is FR on diagonal K in previous iteration
-  once(extend_fr_backward(Offset, From, To, X, KPlusDelta, _, BackwardIn, BackwardExt)),
+  once(extend_fr_backward(Offset, From, To, X, KPlusDelta, XExt, BackwardIn, BackwardExt)),
   (
      check_finish_backward(Offset, Delta, D, KPlusDelta, ForwardIn, X)
-  -> XOut #= X, YOut #= X - K - Delta,
+   -> XOut #= XExt, YOut #= XExt - K - Delta, U #= X, V #= X-K,
      diagonal_to_xy(KPlusDelta, XOut, YOut)
-  ; 
-     once(kloop_iter_backward(Offset, From, To, Delta, D, Next, Max, BackwardExt, BackwardOut, ForwardIn, XOut, YOut))
+  ; once(kloop_iter_backward(Offset, From, To, Delta, D, Next, Max, BackwardExt, BackwardOut, ForwardIn, XOut, YOut, U, V))
   ).
 
 % Outer D Loop:
@@ -237,35 +236,34 @@ kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut,
 % dloop_proc_2(From, To, Delta, D, Max, ForwardIn, BackwardExt, XOut,ForwardOut, BackwardOut) :- 
 %   dloop(From, To, Delta, D, Max, ForwardIn, BackwardIn, XOut, ForwardOut, BackwardOut).
 
-dloop(_, _, _, _, D, Max, _, _, -1, -1,_, _) :- 
+dloop(_, _, _, _, D, Max, _, _, -1, -1,_, _, -1, -1, 0) :- 
   D #> div(Max+1, 2)+1.
-dloop(Offset, From, To, Delta, D, Max, ForwardIn, BackwardIn, XOut, YOut, ForwardOut, BackwardOut) :- 
+dloop(Offset, From, To, Delta, D, Max, ForwardIn, BackwardIn, XOut, YOut, ForwardOut, BackwardOut, U, V, DOut) :- 
   D #< div(Max+1, 2)+2, 
   DNext #= D+1,
   DNeg  #= 0-D,
 
-  once(kloop_iter_forward(Offset, From, To, Delta, D, DNeg, Max, ForwardIn, ForwardExt, BackwardIn, XOut0, YOut0)), 
+  once(kloop_iter_forward(Offset, From, To, Delta, D, DNeg, Max, ForwardIn, ForwardExt, BackwardIn, XOut0, YOut0, U0, V0)), 
   (
     XOut0 =:= -1
-  -> once(kloop_iter_backward(Offset, From, To, Delta, D, DNeg, Max, BackwardIn, BackwardExt, ForwardExt, XOut1, YOut1)),
+  -> once(kloop_iter_backward(Offset, From, To, Delta, D, DNeg, Max, BackwardIn, BackwardExt, ForwardExt, XOut1, YOut1, U1, V1)),
      ( 
        XOut1 =:= -1
-     -> dloop(Offset, From, To, Delta, DNext, Max, ForwardExt, BackwardExt, XOut ,YOut, ForwardOut, BackwardOut)
-     ; XOut is XOut1, YOut is YOut1
+     -> dloop(Offset, From, To, Delta, DNext, Max, ForwardExt, BackwardExt, XOut ,YOut, ForwardOut, BackwardOut, U, V, DOut)
+     ; XOut is XOut1, YOut is YOut1, U is U1, V is V1, DOut #= D
      )
-  ; XOut is XOut0, YOut is YOut0
+  ; XOut is XOut0, YOut is YOut0, U is U0, V is V0, DOut #= D
   ).
-% dloop_proc_1(From, To, Delta, D, Max, ForwardExt, BackwardIn, XOut,ForwardOut, BackwardOut).
 
-middle_snake([], [], ReturnX, ReturnY) :- 
+middle_snake([], [], ReturnX, ReturnY, 0,0,0) :- 
   ReturnX #= 0, ReturnY #= 0.
-middle_snake([], S, ReturnX, ReturnY) :- 
-  length(S, L),
-  ReturnX #= 0, ReturnY #= (L+1)//2.
-middle_snake(S, [], ReturnX, ReturnY) :- 
-  length(S, L),
-  ReturnX #= (L+1)//2, ReturnY #= 0.
-middle_snake(S0, S1, ReturnX, ReturnY) :- 
+middle_snake([], S, ReturnX, ReturnY, U, V, Diff) :- 
+  length(S, Diff),
+  ReturnX #= 0, ReturnY #= 0, U #= 0, V #= Diff.
+middle_snake(S, [], ReturnX, ReturnY, U, V, DOut) :- 
+  length(S, Diff),
+  ReturnX #= 0, ReturnY #=0, U #= 0, V #= Diff.
+middle_snake(S0, S1, ReturnX, ReturnY, U, V, DOut) :- 
   append(['x'], S0, From),
   append(['y'], S1, To),
 
@@ -274,14 +272,15 @@ middle_snake(S0, S1, ReturnX, ReturnY) :-
   Delta #= M - N, 
   Max #= M + N,
   Offset #= (Max+1) // 2,
+  BufferSize #= Max*2 + 1,
 
   MMinus #= M-1,
 
   % Buffers for furthest reaching point 
-  init_list(Max, 0, Forward),
-  init_list(Max, MMinus, Backward),
+  init_list(BufferSize, 0, Forward),
+  init_list(BufferSize, MMinus, Backward),
 
-  dloop(Offset, From, To, Delta, 0, Max, Forward, Backward, ReturnX, ReturnY, _, _). 
+  dloop(Offset, From, To, Delta, 0, Max, Forward, Backward, ReturnX, ReturnY, _, _, U, V, DOut). 
 
 
 %% Unit Tests 
@@ -434,6 +433,7 @@ test(middle_snake_12) :-
         middle_snake(['A','B','B', 'C'], ['A','A', 'C','B'], 2, 2).
 test(middle_snake_13) :-
         middle_snake(['A','B','B','B'], ['A','A', 'C','B'], 2, 2).
+
 
 
 :- end_tests(middle_snake).
