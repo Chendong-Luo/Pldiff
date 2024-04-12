@@ -103,22 +103,30 @@ search_backward(A, B, Offset) :-
 % 
 % NOTE: in forward version, we compare from the NEXT string:
 %   keep searching while from[x+1+offset] == to[y+1+offset]
-extend_fr_forward(_, [], _, X, _, X, FRArray, FRArray) :- true.
-extend_fr_forward(_, _, [], X, _, X, FRArray, FRArray) :- true.
-extend_fr_forward(Offset, _, To, X, K, X, FRArrayIn, FRArrayOut) :-
+%
+%
+extend_fr_forward(_, A, _, X, _, X, _) :- 
+  length(A, L), X #> L-1.
+extend_fr_forward(_, _, A, X, K, X, _) :- 
+  Y #= X-K,
+  length(A, L), Y #> L-1.
+extend_fr_forward(_, A, _, X, _, X, _) :- 
+  X #< 0.
+extend_fr_forward(_, A, _, X, K, X, _) :- 
+  Y #= X-K,
+  Y #< 0. 
+extend_fr_forward(_, [], _, X, _, X, FRArray) :- true.
+extend_fr_forward(_, _, [], X, _, X, FRArray) :- true.
+extend_fr_forward(Offset, _, To, X, K, X, FRArrayIn) :-
   diagonal_to_xy(K,X,Y),
   length(To, L),
   Y #> L-2, 
-  Index #= Offset + K,
-  append(H, [_|T], FRArrayIn), length(H, Index),
-  append(H, [X|T], FRArrayOut).
-extend_fr_forward(Offset, From, _, X, K, X, FRArrayIn, FRArrayOut) :-
+  Index #= Offset + K.
+extend_fr_forward(Offset, From, _, X, K, X, FRArrayIn) :-
   length(From, L),
   X #> L-2,
-  Index #= Offset + K,
-  append(H, [_|T], FRArrayIn), length(H, Index),
-  append(H, [X|T], FRArrayOut).
-extend_fr_forward(Offset, From, To, X, K, XOut, FRArrayIn, FRArrayOut) :-
+  Index #= Offset + K.
+extend_fr_forward(Offset, From, To, X, K, XOut, FRArrayIn) :-
   Index #= Offset + K,
   diagonal_to_xy(K,X,Y),
   XX #= X+1,
@@ -126,26 +134,34 @@ extend_fr_forward(Offset, From, To, X, K, XOut, FRArrayIn, FRArrayOut) :-
   append(L, S0, From), length(L, XX),
   append(R, S1, To), length(R, YY),
   search_forward(S0, S1, Move),
-  XOut #= X+Move,
-  append(H, [_|T], FRArrayIn), length(H, Index),
-  append(H, [XOut|T], FRArrayOut).
+  XOut #= X+Move.
 
 % Good
 % Backward Version
-extend_fr_backward(_, [], _, X, _, X, FRArray, FRArray) :- true.
-extend_fr_backward(_, _, [], X, _, X, FRArray, FRArray) :- true.
-extend_fr_backward(Offset, [], [], X, K, X, FRArrayIn, FRArrayOut) :- 
+extend_fr_backward(_, A, _, X, _, X, _) :- 
+  length(A, L), X #> L-1.
+extend_fr_backward(_, _, A, X, K, X, _) :- 
+  Y #= X-K,
+  length(A, L), Y #> L-1.
+extend_fr_backward(_, A, _, X, _, X, _) :- 
+  X #< 0.
+extend_fr_backward(_, A, _, X, K, X, _) :- 
+  Y #= X-K,
+  Y #< 0. 
+extend_fr_backward(_, [], A, X, K, X, _) :- 
+  Y #= X-K, 
+  length(A, LA), Y #> LA-1. 
+extend_fr_backward(_, _, _, 0, _, 0, _).
+extend_fr_backward(_, [], _, X, _, X, _).
+extend_fr_backward(_, _, [], X, _, X, _).
+extend_fr_backward(Offset, [], [], X, K, X, FRArrayIn) :- 
   X #< 1,
-  Index #= Offset + K,
-  append(H, [_|T], FRArrayIn), length(H, Index),
-  append(H, [X|T], FRArrayOut).
-extend_fr_backward(Offset, [], [], X, K, X, FRArrayIn, FRArrayOut) :- 
+  Index #= Offset + K.
+extend_fr_backward(Offset, [], [], X, K, X, FRArrayIn) :- 
   diagonal_to_xy(K,X,Y),
   Y #< 1,
-  Index #= Offset + K,
-  append(H, [_|T], FRArrayIn), length(H, Index),
-  append(H, [X|T], FRArrayOut).
-extend_fr_backward(Offset, From, To, X, K, XOut, FRArrayIn, FRArrayOut) :- 
+  Index #= Offset + K.
+extend_fr_backward(Offset, From, To, X, K, XOut, FRArrayIn) :- 
   Index #= Offset + K,
   diagonal_to_xy(K,X,Y),
   XX #= X+1,
@@ -157,9 +173,7 @@ extend_fr_backward(Offset, From, To, X, K, XOut, FRArrayIn, FRArrayOut) :-
     X-Move #< 0
   -> XOut #= 0
   ;  XOut #= X-Move
-  ),
-  append(H, [_|T], FRArrayIn), length(H, Index),
-  append(H, [XOut|T], FRArrayOut).
+  ).
 
 %% Inner K-Loop: 
 %
@@ -180,16 +194,26 @@ check_finish_forward(_, _, Offset, Delta, D, K, BackwardIn, X) :-
   Delta + 1 - D < K + 1, 
   K < Delta + D, 
   Index #= K + Offset, 
-  nth0(Index, BackwardIn, X).
+  nth0(Index, BackwardIn, BackwardX),
+  X #= BackwardX.
 
 % Main K-Loop Iteration 
+% kloop_iter_forward(_, _, _, _, D, K, _, ForwardIn, ForwardIn, _, -1, -1, -1, -1) :-
+%   length(ForwardIn, LF), K #> LF-1, 
+%   format("K=~w - Endof Forward ForwardArray = ~w ~n", [K, ForwardIn]).
 kloop_iter_forward(_, _, _, _, D, K, _, ForwardIn, ForwardIn, _, -1, -1, -1, -1) :- 
-  K #> D. 
+  K #> D, 
+  format("    K=~w - Endof Forward ForwardArray = ~w ~n~n", [K, ForwardIn]).
 kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, BackwardIn, XOut, YOut, U, V) :- 
   K #< D+1, 
+  % KIndex #= K+Offset, 
+  % KIndex #> -1, length(ForwardIn, LF), KIndex #< LF,
   Next #= K+2,
   once(mksnake_forward(Offset, K, D, ForwardIn, X)), % X is FR on diagonal K in previous iteration
-  once(extend_fr_forward(Offset, From, To, X, K, XExt, ForwardIn, ForwardExt)), 
+  once(extend_fr_forward(Offset, From, To, X, K, XExt, ForwardIn)), 
+  Index #= Offset + K,
+  put(ForwardIn, Index, XExt, ForwardExt),
+  format("    K=~w - Forward ~n ~w ~n ~w ~n", [K, ForwardIn, ForwardExt]),
   length(From, LX), length(To, LY),
   (
     check_finish_forward(LX, LY, Offset, Delta, D, K, BackwardIn, XExt)
@@ -202,25 +226,37 @@ kloop_iter_forward(Offset, From, To, Delta, D, K, Max, ForwardIn, ForwardOut, Ba
 check_finish_backward(Offset, Delta, D, K, ForwardIn, X) :- 
   % Delta is even && k+delta in [-d, d]
   Delta mod 2 #= 0, 
-  0 - D < K + Delta + 1, 
-  K + Delta < D + 1, 
+  0 - D < K + 1, 
+  K < D + 1, 
   Index #= K + Offset, 
-  nth0(Index, ForwardIn, X).
+  nth0(Index, ForwardIn, ForwardX),
+  format("Backward Checking K=~w overlapping? ~w ~w ~w !!!!! ~n", [K, X, ForwardX, ForwardIn]),
+  X #= ForwardX.
   
 kloop_iter_backward(_, _, _, _, D, K, _, BackwardIn, BackwardIn, _, -1, -1, -1, -1) :- 
-  K #> D. 
+  K #> D, 
+  format("    K=~w - Endof BackwardArray = ~w ~n~n", [K, BackwardIn]).
 kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut, ForwardIn, XOut, YOut, U, V) :- 
-  K #< D+1,
+  K #< D+1, 
+  KPlusDelta #= K + Delta, 
+  % KIndex #= KPlusDelta+Offset, 
+  % KIndex > -1, length(BackwardIn, LB), KIndex #< LB,
   Next #= K+2,
-  KPlusDelta #= K + Delta,
-  once(mksnake_backward(Delta, Offset, K, D, BackwardIn, X)), % X is FR on diagonal K in previous iteration
-  once(extend_fr_backward(Offset, From, To, X, KPlusDelta, XExt, BackwardIn, BackwardExt)),
+  once(mksnake_backward(Delta, Offset, KPlusDelta, D, BackwardIn, X)), % X is FR on diagonal K in previous iteration
+  once(extend_fr_backward(Offset, From, To, X, KPlusDelta, XExt, BackwardIn)),
+  Index #= Offset+KPlusDelta,
+  put(BackwardIn, Index, XExt, BackwardExt),
+  format("    K=~w - Backward ~w ~n ~w ~n", [KPlusDelta, BackwardIn, BackwardExt]),
   (
      check_finish_backward(Offset, Delta, D, KPlusDelta, ForwardIn, X)
    -> XOut #= XExt, YOut #= XExt - K - Delta, U #= X, V #= X-K,
      diagonal_to_xy(KPlusDelta, XOut, YOut)
   ; once(kloop_iter_backward(Offset, From, To, Delta, D, Next, Max, BackwardExt, BackwardOut, ForwardIn, XOut, YOut, U, V))
   ).
+
+put(List, N, X, ListOut) :- 
+  append(L0, [_|L1], List), length(L0, N),
+  append(L0, [X|L1], ListOut).
 
 % Outer D Loop:
 % searching by increasing number of differences where d = 0,1, ..., (max+1)/2
@@ -237,12 +273,13 @@ kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut,
 %   dloop(From, To, Delta, D, Max, ForwardIn, BackwardIn, XOut, ForwardOut, BackwardOut).
 
 dloop(_, _, _, _, D, Max, _, _, -1, -1,_, _, -1, -1, 0) :- 
-  D #> div(Max+1, 2)+1.
+  D #> div(Max+1, 2)+1,
+  format("D Loop Finished ~n",[]).
 dloop(Offset, From, To, Delta, D, Max, ForwardIn, BackwardIn, XOut, YOut, ForwardOut, BackwardOut, U, V, DOut) :- 
   D #< div(Max+1, 2)+2, 
+  format("~n D = ~w Loop ~n ~w ~n ~w ~n",[D, ForwardIn, BackwardIn]),
   DNext #= D+1,
   DNeg  #= 0-D,
-
   once(kloop_iter_forward(Offset, From, To, Delta, D, DNeg, Max, ForwardIn, ForwardExt, BackwardIn, XOut0, YOut0, U0, V0)), 
   (
     XOut0 =:= -1
@@ -272,7 +309,7 @@ middle_snake(S0, S1, ReturnX, ReturnY, U, V, DOut) :-
   Delta #= M - N, 
   Max #= M + N,
   Offset #= (Max+1) // 2,
-  BufferSize #= Max*2 + 1,
+  BufferSize #= 2*Max + 1,
 
   MMinus #= M-1,
 
@@ -280,7 +317,7 @@ middle_snake(S0, S1, ReturnX, ReturnY, U, V, DOut) :-
   init_list(BufferSize, 0, Forward),
   init_list(BufferSize, MMinus, Backward),
 
-  dloop(Offset, From, To, Delta, 0, Max, Forward, Backward, ReturnX, ReturnY, _, _, U, V, DOut). 
+  dloop(Max, From, To, Delta, 0, Max, Forward, Backward, ReturnX, ReturnY, _, _, U, V, DOut). 
 
 
 %% Unit Tests 
@@ -433,6 +470,10 @@ test(middle_snake_12) :-
         middle_snake(['A','B','B', 'C'], ['A','A', 'C','B'], 2, 2).
 test(middle_snake_13) :-
         middle_snake(['A','B','B','B'], ['A','A', 'C','B'], 2, 2).
+
+
+% Never Give Up...
+
 
 
 
