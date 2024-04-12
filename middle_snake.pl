@@ -65,7 +65,6 @@ mksnake_backward(Delta,Offset, K, D, FRArray, X) :-
   K #= Delta + D,
   KMinus #= K - 1,
   get_fr(Offset, KMinus, FRArray, Y),
-  format("??? ~w ~w ~w ~w ~n",[Y, K, Delta, Offset]),
   get_fr(Offset, KMinus, FRArray, X).
 mksnake_backward(Delta,Offset, K, D, FRArray, X) :-
   % Moving Up from Left as Left diagonal is closer to (0,0)
@@ -255,7 +254,7 @@ kloop_iter_backward(Offset, From, To, Delta, D, K, Max, BackwardIn, BackwardOut,
   % format("    K=~w - Backward ~w ~n ~w ~n", [KPlusDelta, BackwardIn, BackwardExt]),
   (
      check_finish_backward(Offset, Delta, D, KPlusDelta, ForwardIn, X)
-   -> XOut #= XExt, YOut #= XExt - K - Delta, U #= X, V #= X-K,
+   -> XOut #= XExt, YOut #= XExt - K - Delta, U #= X, V #= X-KPlusDelta,
      diagonal_to_xy(KPlusDelta, XOut, YOut)
   ; once(kloop_iter_backward(Offset, From, To, Delta, D, Next, Max, BackwardExt, BackwardOut, ForwardIn, XOut, YOut, U, V))
   ).
@@ -323,7 +322,6 @@ middle_snake(S0, S1, ReturnX, ReturnY, U, V, DOut) :-
   init_list(BufferSize, 0, Forward),
   II #= Max + Delta-1,
   init_list_with(BufferSize, Max, Backward, II, MMinus),
-  format("Preparing to search ~w~n", [Backward]),
 
   dloop(Max, From, To, Delta, 0, Max, Forward, Backward, ReturnX, ReturnY, _, _, U, V, DOut). 
 
