@@ -311,12 +311,12 @@ action(1) :-
     write('Please enter the string to change to: '), flush_output(current_output),
     read_line_to_string(user_input, Str2),
     write('You entered: '), write(Str2), nl,
-    mdiff_raw(Diff, Str1, Str2, Step),
+    once(mdiff_raw(Diff, Str2, Str1, Step)),
     write('Answer: '), write(Diff), nl,
     write('Minimal steps: '), write(Step), nl.
 
 action(2) :-
-    mdiff(Diff, Step),
+    once(mdiff(Diff, Step)),
     write('Answer: '), write(Diff), nl,
     write('Minimal steps: '), write(Step), nl.
 
